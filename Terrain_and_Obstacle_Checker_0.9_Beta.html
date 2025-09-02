@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เครื่องมือตรวจสอบไฟล์ AIM</title>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 2em;
+            padding-top: 80px; 
+        }
+        
+        .logo-container-left {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+        }
+        .logo-container-right {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+        }
+        .logo-container-left img, .logo-container-right img {
+            height: 60px; 
+            width: auto;
+        }
+
+        h1 {
+            color: #005f73;
+        }
+        .container {
+            background-color: #fff;
+            padding: 2em;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 1100px;
+        }
+        .choice-container, .area-selector {
+            margin-bottom: 1.5em;
+            padding-bottom: 1.5em;
+            border-bottom: 1px solid #ddd;
+        }
+        .choice-container label, .area-selector label {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #333;
+        }
+        select {
+            width: 100%;
+            padding: 0.8em;
+            margin-top: 0.5em;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+            font-family: 'Sarabun', sans-serif;
+            font-size: 1em;
+        }
+        .area-selector-options label {
+            margin-right: 1em;
+            font-weight: normal;
+        }
+        .uploader-section {
+            text-align: center;
+            padding: 1em;
+        }
+        input[type="file"] {
+            border: 2px dashed #0077b6;
+            padding: 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 90%;
+            background-color: #f8f9fa;
+        }
+        button {
+            background-color: #0077b6;
+            color: white;
+            border: none;
+            padding: 0.8em 1.5em;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 1em;
+        }
+        button:hover {
+            background-color: #005f73;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1em;
+            table-layout: auto;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 0.8em;
+            text-align: left;
+            word-wrap: break-word;
+        }
+        th {
+            background-color: #0077b6;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .summary-pass { color: #2a9d8f; font-weight: bold; }
+        .summary-fail { color: #e76f51; font-weight: bold; }
+        .present { color: #2a9d8f; font-weight: bold; }
+        .missing { color: #e76f51; font-weight: bold; }
+        .warning { color: #c78c00; font-weight: bold; }
+        .status-icon { font-size: 1.2em; }
+        .fail-cell {
+            color: red;
+            text-decoration: underline;
+            font-weight: bold;
+        }
+        .reason-cell {
+            color: #00008B; /* Dark Blue */
+            font-weight: bold;
+        }
+        h3.fail-details-header {
+             margin-top: 2em;
+             color: #c0392b;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="logo-container-left">
+        <img src="https://ais.caat.or.th/dist/img/logo-ais.png" alt="Logo หน่วยงาน 1">
+    </div>
+    <div class="logo-container-right">
+        <img src="https://upload.wikimedia.org/wikipedia/en/8/88/Logo_of_the_Civil_Aviation_Authority_of_Thailand.png" alt="Logo หน่วยงาน 2">
+    </div>
+
+
+    <div class="container">
+        <h1>เครื่องมือตรวจสอบไฟล์ AIM</h1>
+
+        <div class="choice-container">
+            <label for="validationTypeSelect">กรุณาเลือกประเภทที่ต้องการตรวจสอบ:</label>
+            <select id="validationTypeSelect" onchange="toggleUploader()">
+                <option value="terrain" selected>Terrain Attributes</option>
+                <option value="obstacle">Obstacle Attributes and Completeness</option>
+                <option value="datacatalog">Obstacle Datacatalog</option>
+            </select>
+        </div>
+        
+        <div id="areaSelector" class="area-selector" style="display:none;">
+            <label>กรุณาเลือก Area สำหรับ Datacatalog:</label>
+            <div class="area-selector-options">
+                <label><input type="radio" name="areaType" value="area1" checked> Area 1</label>
+                <label><input type="radio" name="areaType" value="area2"> Area 2</label>
+                <label><input type="radio" name="areaType" value="area3"> Area 3</label>
+                <label><input type="radio" name="areaType" value="area4"> Area 4</label>
+            </div>
+        </div>
+
+        <div id="terrainUploader" class="uploader-section">
+            <p>กรุณาเลือกไฟล์ Terrain Metadata:</p>
+            <input type="file" id="terrainFile">
+            <button onclick="validateTerrainFile()">ตรวจสอบไฟล์ Terrain</button>
+        </div>
+
+        <div id="obstacleUploader" class="uploader-section" style="display:none;">
+            <p>กรุณาเลือกไฟล์ Obstacle (Export ไฟล์จาก QGIS .xlsx, .csv):</p>
+            <input type="file" id="obstacleFile" accept=".xlsx, .xls, .csv">
+            <button onclick="validateObstacleFile()">ตรวจสอบไฟล์ Obstacle</button>
+        </div>
+        
+        <div id="datacatalogUploader" class="uploader-section" style="display:none;">
+            <p>กรุณาเลือกไฟล์ Obstacle Datacatalog (Export ไฟล์จาก QGIS .xlsx, .csv):</p>
+            <input type="file" id="datacatalogFile" accept=".xlsx, .xls, .csv">
+            <button onclick="validateDatacatalog()">ตรวจสอบไฟล์ Datacatalog</button>
+        </div>
+
+        <div id="resultsTable"></div>
+    </div>
+
+    <script>
+        // --- DATA DEFINITIONS AND RULES ---
+        const terrainAttributes = [
+            { name: "Area of coverage", type: "Mandatory" }, { name: "Data originator identifier", type: "Mandatory" },
+            { name: "Data source identifier", type: "Mandatory" }, { name: "Acquisition method", type: "Mandatory" },
+            { name: "Post spacing", type: "Mandatory" }, { name: "Horizontal reference system", type: "Mandatory" },
+            { name: "Horizontal resolution", type: "Mandatory" }, { name: "Horizontal accuracy", type: "Mandatory" },
+            { name: "Horizontal confidence level", type: "Mandatory" }, { name: "Horizontal position", type: "Mandatory" },
+            { name: "Elevation", type: "Mandatory" }, { name: "Elevation reference", type: "Mandatory" },
+            { name: "Vertical reference system", type: "Mandatory" }, { name: "Vertical resolution", type: "Mandatory" },
+            { name: "Vertical accuracy", type: "Mandatory" }, { name: "Vertical confidence level", type: "Mandatory" },
+            { name: "Surface type", type: "Optional" }, { name: "Recorded surface", type: "Mandatory" },
+            { name: "Penetration level", type: "Optional" }, { name: "Known variations", type: "Optional" },
+            { name: "Integrity", type: "Mandatory" }, { name: "Date and time stamp", type: "Mandatory" },
+            { name: "Unit of measurement used", type: "Mandatory" }
+        ];
+        const obstacleAttributes = [
+            { name: "Area of coverage", type: "Mandatory", abbreviations: ['coverage'] },
+            { name: "Data originator identifier", type: "Mandatory", abbreviations: ['originator'] },
+            { name: "Data source identifier", type: "Mandatory", abbreviations: ['source'] },
+            { name: "Obstacle identifier", type: "Mandatory", abbreviations: ['idnumber'] },
+            { name: "Horizontal accuracy", type: "Mandatory", abbreviations: ['hacc'] },
+            { name: "Horizontal confidence level", type: "Mandatory", abbreviations: ['hcflvl'] },
+            { name: "Horizontal position", type: "Mandatory", abbreviations: ['longitude', 'latitude'], requiresAll: true },
+            { name: "Horizontal resolution", type: "Mandatory", abbreviations: ['hres'] },
+            { name: "Horizontal extent", type: "Mandatory", abbreviations: ['hextent', 'geometry'] },
+            { name: "Horizontal reference system", type: "Mandatory", abbreviations: ['href'] },
+            { name: "Elevation", type: "Mandatory", abbreviations: ['elev'] },
+            { name: "Height", type: "Optional", abbreviations: ['height'] },
+            { name: "Vertical accuracy", type: "Mandatory", abbreviations: ['vacc'] },
+            { name: "Vertical confidence level", type: "Mandatory", abbreviations: ['vcflvl'] },
+            { name: "Vertical resolution", type: "Mandatory", abbreviations: ['vres'] },
+            { name: "Vertical reference system", type: "Mandatory", abbreviations: ['vref'] },
+            { name: "Obstacle type", type: "Mandatory", abbreviations: ['type'] },
+            { name: "Geometry type", type: "Mandatory", abbreviations: ['geometry'] },
+            { name: "Integrity", type: "Mandatory", abbreviations: ['integrity'] },
+            { name: "Date and time stamp", type: "Mandatory", abbreviations: ['revdate'] },
+            { name: "Unit of measurement used", type: "Mandatory", abbreviations: ['uom'] },
+            { name: "Operations", type: "Optional", abbreviations: ['operations'] },
+            { name: "Effectivity", type: "Optional", abbreviations: ['effectiv'] },
+            { name: "Lighting", type: "Mandatory", abbreviations: ['lighting'] },
+            { name: "Marking", type: "Mandatory", abbreviations: ['marking'] }
+        ];
+        const datacatalogRules = {
+            area1: { hres: 1, vres: 1, integrity: 'routine', hacc: 50, vacc: 30 },
+            area2: { hres: 0.1, vres: 1, integrity: 'essential', hacc: 5, vacc: 3 },
+            area3: { hres: 0.1, vres: 0.1, integrity: 'essential', hacc: 0.5, vacc: 0.5 },
+            area4: { hres: null, vres: 0.1, integrity: 'essential', hacc: 2.5, vacc: 1 }
+        };
+
+        // --- UI LOGIC ---
+        function toggleUploader() {
+            const validationType = document.getElementById('validationTypeSelect').value;
+            document.getElementById('terrainUploader').style.display = (validationType === 'terrain') ? 'block' : 'none';
+            document.getElementById('obstacleUploader').style.display = (validationType === 'obstacle') ? 'block' : 'none';
+            document.getElementById('datacatalogUploader').style.display = (validationType === 'datacatalog') ? 'block' : 'none';
+            document.getElementById('areaSelector').style.display = (validationType === 'datacatalog') ? 'block' : 'none';
+            document.getElementById('resultsTable').innerHTML = '';
+        }
+
+        // --- VALIDATION FUNCTIONS ---
+        function validateTerrainFile(){
+            const fileInput = document.getElementById('terrainFile');
+            if (fileInput.files.length === 0) { alert('กรุณาเลือกไฟล์ Terrain ก่อนครับ'); return; }
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(e.target.result, "text/xml");
+                if (xmlDoc.getElementsByTagName("parsererror").length > 0) { displayResults(null, "error", "ไฟล์ที่อัปโหลดไม่มีโครงสร้างแบบ XML ที่ถูกต้อง"); return; }
+                const guiNamesInFile = new Set();
+                const guiElements = xmlDoc.getElementsByTagName("GUINAME");
+                for (let i = 0; i < guiElements.length; i++) { guiNamesInFile.add(guiElements[i].textContent.trim().toLowerCase()); }
+                let isMeterUnitFound = false;
+                const valueElements = xmlDoc.getElementsByTagName("VALUE");
+                for (let i = 0; i < valueElements.length; i++) {
+                    if (valueElements[i].textContent.trim().toLowerCase() === 'meter') { isMeterUnitFound = true; break; }
+                }
+                const validationResults = terrainAttributes.map(attr => {
+                    let found = false;
+                    if (attr.name === "Unit of measurement used") { found = isMeterUnitFound; } 
+                    else { found = guiNamesInFile.has(attr.name.toLowerCase()); }
+                    return { name: attr.name, type: attr.type, found: found };
+                });
+                displayResults(validationResults, "Terrain Attributes", file.name);
+            };
+            reader.readAsText(file);
+        }
+        
+        function validateObstacleFile(){
+            const fileInput = document.getElementById('obstacleFile');
+            if (fileInput.files.length === 0) { alert('กรุณาเลือกไฟล์ (.xlsx, .csv) ก่อนครับ'); return; }
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const workbook = XLSX.read(e.target.result, { type: 'binary' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const data = XLSX.utils.sheet_to_json(worksheet, {raw: false, defval:null});
+                    const headers = XLSX.utils.sheet_to_json(worksheet, { header: 1 })[0] || [];
+                    
+                    const headerMap = {};
+                    obstacleAttributes.forEach(attr => {
+                        let foundHeader = null;
+                        if(attr.requiresAll) {
+                            const allFound = attr.abbreviations.every(abbr => headers.some(h => h.toLowerCase() === abbr));
+                            if(allFound) { headerMap[attr.name] = attr.abbreviations.map(abbr => headers.find(h => h.toLowerCase() === abbr)); }
+                        } else {
+                            foundHeader = headers.find(h => attr.abbreviations.includes(h.toLowerCase()));
+                            if(foundHeader) { headerMap[attr.name] = foundHeader; }
+                        }
+                    });
+                    
+                    const hextentHeader = headerMap['Horizontal extent'];
+                    const geometryHeader = headerMap['Geometry type'];
+
+                    const validationResults = [];
+                    const allMissingMandatoryRows = [];
+
+                    obstacleAttributes.forEach(attr => {
+                        const result = { name: attr.name, type: attr.type, status: '' };
+                        const header = headerMap[attr.name];
+
+                        if (header) {
+                            let presentCount = 0;
+                            const missingRowsForThisAttr = [];
+                            
+                            data.forEach(row => {
+                                let hasValue = false;
+                                if (attr.name === 'Horizontal extent') {
+                                    const geometryValue = geometryHeader ? (row[geometryHeader] != null && row[geometryHeader] !== '') : false;
+                                    const hextentValue = hextentHeader ? (row[hextentHeader] != null && row[hextentHeader] !== '') : false;
+                                    hasValue = geometryValue || hextentValue;
+                                } else if(attr.requiresAll) {
+                                    hasValue = header.every(h => row[h] != null && row[h] !== '');
+                                } else {
+                                    hasValue = row[header] != null && row[header] !== '';
+                                }
+
+                                if (hasValue) {
+                                    presentCount++;
+                                } else if (attr.type === 'Mandatory') {
+                                    const idHeader = headerMap['Obstacle identifier'];
+                                    missingRowsForThisAttr.push({ id: row[idHeader] || 'N/A', missingAttribute: attr.name });
+                                }
+                            });
+                            
+                            if (attr.type === 'Mandatory') {
+                                if (missingRowsForThisAttr.length === 0) {
+                                    result.status = `<span class="present">พบ Attributes ,ข้อมูลครบถ้วน</span>`;
+                                } else {
+                                    result.status = `<span class="warning">พบ Attributes ,ข้อมูลไม่ครบถ้วน</span>`;
+                                    allMissingMandatoryRows.push(...missingRowsForThisAttr);
+                                }
+                            } else { 
+                                result.status = `<span class="present">พบ Attributes ,พบข้อมูลจำนวน ${presentCount}/${data.length} รายการ</span>`;
+                            }
+                        } else { 
+                            if (attr.type === 'Mandatory') {
+                                result.status = `<span class="missing">ไม่พบ Attribute ,ข้อมูลไม่ครบถ้วน</span>`;
+                            } else { 
+                                result.status = `<span class="missing">ไม่มี</span>`;
+                            }
+                        }
+                        validationResults.push(result);
+                    });
+                    
+                    const missingDataGroupedById = {};
+                    allMissingMandatoryRows.forEach(row => {
+                        if (!missingDataGroupedById[row.id]) {
+                            missingDataGroupedById[row.id] = [];
+                        }
+                        missingDataGroupedById[row.id].push(row.missingAttribute);
+                    });
+
+                    displayObstacleAttributeResults(validationResults, file.name, missingDataGroupedById);
+
+                } catch (err) { console.error("Error parsing file:", err); displayResults(null, "error", "ไม่สามารถอ่านไฟล์ Excel/CSV ได้"); }
+            };
+            reader.readAsBinaryString(file);
+        }
+
+        // UPDATED: This function is now more flexible for Href and Vref
+        function validateDatacatalog() {
+            const fileInput = document.getElementById('datacatalogFile');
+            if (fileInput.files.length === 0) { alert('กรุณาเลือกไฟล์ Datacatalog (.xlsx, .csv) ก่อนครับ'); return; }
+            const file = fileInput.files[0];
+            const selectedArea = document.querySelector('input[name="areaType"]:checked').value;
+            const rules = datacatalogRules[selectedArea];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const workbook = XLSX.read(e.target.result, { type: 'binary' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const data = XLSX.utils.sheet_to_json(worksheet, { raw: false });
+                    let passedCount = 0, failedCount = 0;
+                    const failedRecords = [];
+                    const headers = XLSX.utils.sheet_to_json(worksheet, { header: 1 })[0] || [];
+                    const headerMap = {};
+                    obstacleAttributes.forEach(attr => {
+                        const foundHeader = headers.find(h => attr.abbreviations.includes(h.toLowerCase()));
+                        if(foundHeader) { headerMap[attr.name] = foundHeader; }
+                    });
+
+                    data.forEach(row => {
+                        let isRowValid = true;
+                        const failures = { hres: false, vres: false, integrity: false, hacc: false, vacc: false, Href: false, Vref: false };
+                        const getValue = (attrName) => row[headerMap[attrName]];
+                        
+                        const hres = parseFloat(getValue("Horizontal resolution"));
+                        if (rules.hres !== null && (isNaN(hres) || hres > rules.hres)) { isRowValid = false; failures.hres = true; }
+                        const vres = parseFloat(getValue("Vertical resolution"));
+                        if (isNaN(vres) || vres > rules.vres) { isRowValid = false; failures.vres = true; }
+                        const integrity = (getValue("Integrity") || '').toLowerCase();
+                        if (integrity !== rules.integrity) { isRowValid = false; failures.integrity = true; }
+                        const hacc = parseFloat(getValue("Horizontal accuracy"));
+                        if (isNaN(hacc) || hacc > rules.hacc) { isRowValid = false; failures.hacc = true; }
+                        const vacc = parseFloat(getValue("Vertical accuracy"));
+                        if (isNaN(vacc) || vacc > rules.vacc) { isRowValid = false; failures.vacc = true; }
+                        
+                        // --- UPDATED Href and Vref validation logic ---
+                        const HrefRaw = (getValue("Horizontal reference system") || '');
+                        // Normalize the string by removing spaces, underscores, and dashes before comparing
+                        const normalizedHref = HrefRaw.toLowerCase().replace(/[\s_-]/g, '');
+                        if (normalizedHref !== 'wgs84') {
+                             isRowValid = false; failures.Href = true;
+                        }
+
+                        const VrefRaw = (getValue("Vertical reference system") || '');
+                        // Normalize and check for both correct spelling and common typo
+                        const normalizedVref = VrefRaw.toLowerCase().replace(/[\s_-]/g, '');
+                        if (normalizedVref !== 'egm96' && normalizedVref !== 'emg96') { 
+                            isRowValid = false; failures.Vref = true;
+                        }
+
+                        if (isRowValid) { passedCount++; } 
+                        else {
+                            failedCount++;
+                            failedRecords.push({
+                                values: {
+                                    IDNumber: getValue("Obstacle identifier") || 'N/A',
+                                    hres: hres, vres: vres, hacc: hacc, vacc: vacc,
+                                    Integrity: integrity, Coverage: getValue("Area of coverage") || 'N/A',
+                                    Href: HrefRaw, Vref: VrefRaw
+                                },
+                                failures: failures
+                            });
+                        }
+                    });
+                    displayDatacatalogResults(passedCount, failedCount, failedRecords, selectedArea.toUpperCase(), rules);
+                } catch (err) { console.error("Error parsing file:", err); displayResults(null, "error", "ไม่สามารถอ่านไฟล์ Excel/CSV ได้");}
+            };
+            reader.readAsBinaryString(file);
+        }
+
+        // --- DISPLAY FUNCTIONS ---
+        function displayResults(results, title, fileName, errorMessage) {
+            const resultsDiv = document.getElementById('resultsTable');
+            if (title === "clear") { resultsDiv.innerHTML = ''; return; }
+            if (!results) {
+                const msg = errorMessage || "เกิดข้อผิดพลาด: ไม่สามารถอ่านไฟล์ได้ หรือไฟล์มีรูปแบบไม่ถูกต้อง";
+                resultsDiv.innerHTML = `<p class="missing">${msg}</p>`;
+                return;
+            }
+            let tableHTML = `<h2>${title} (${fileName})</h2><table><thead><tr><th>Attribute</th><th>ประเภท (ตามเอกสาร)</th><th>สถานะในไฟล์</th></tr></thead><tbody>`;
+            results.forEach(result => {
+                let statusHtml;
+                if (result.found) { statusHtml = '<span class="present"><span class="status-icon">✓</span> มี</span>'; } 
+                else {
+                    if (title === "Terrain Attributes" && (result.name === "Horizontal position" || result.name === "Elevation")) {
+                        statusHtml = '<span class="warning">ตรวจสอบข้อมูลใน QGIS</span>';
+                    } else {
+                        statusHtml = '<span class="missing"><span class="status-icon">✗</span> ไม่มี</span>';
+                    }
+                }
+                tableHTML += `<tr><td>${result.name}</td><td>${result.type}</td><td>${statusHtml}</td></tr>`;
+            });
+            tableHTML += `</tbody></table>`;
+            resultsDiv.innerHTML = tableHTML;
+        }
+
+        function displayObstacleAttributeResults(results, fileName, groupedFailures) {
+            const resultsDiv = document.getElementById('resultsTable');
+            let tableHTML = `<h2>Obstacle Attributes and Completeness (${fileName})</h2><table><thead><tr><th>Attribute</th><th>ประเภท (ตามเอกสาร)</th><th>สถานะในไฟล์</th></tr></thead><tbody>`;
+            results.forEach(result => {
+                 tableHTML += `<tr><td>${result.name}</td><td>${result.type}</td><td>${result.status}</td></tr>`;
+            });
+            tableHTML += `</tbody></table>`;
+
+            if (Object.keys(groupedFailures).length > 0) {
+                tableHTML += `<h3 class="fail-details-header">รายละเอียด Mandatory Attributes ที่ข้อมูลไม่ครบถ้วน</h3>`;
+                tableHTML += `<table><thead><tr><th>IDNumber</th><th>Attribute ที่ข้อมูลไม่ครบ</th></tr></thead><tbody>`;
+                for (const id in groupedFailures) {
+                    const missingAttrs = groupedFailures[id].join(', ');
+                    tableHTML += `<tr><td>${id}</td><td>${missingAttrs}</td></tr>`;
+                }
+                tableHTML += `</tbody></table>`;
+            }
+            resultsDiv.innerHTML = tableHTML;
+        }
+        
+        function displayDatacatalogResults(passed, failed, failedRecords, area, rules) {
+            const resultsDiv = document.getElementById('resultsTable');
+            let summaryHtml = `<h2>Obstacle Datacatalog (${area})</h2><p><span class="summary-pass">ผ่าน: ${passed} รายการ</span> | <span class="summary-fail">ไม่ผ่าน: ${failed} รายการ</span></p>`;
+            if (failed > 0) {
+                summaryHtml += `<h3 class="fail-details-header">รายการที่ไม่ตรงตามข้อกำหนด</h3><table><thead><tr>
+                                <th>IDNumber</th>
+                                <th>Horizontal resolution</th>
+                                <th>Vertical resolution</th>
+                                <th>Horizontal accuracy</th>
+                                <th>Vertical accuracy</th>
+                                <th>Integrity</th>
+                                <th>Href</th>
+                                <th>Vref</th>
+                                <th>หมายเหตุ</th>
+                                </tr></thead><tbody>`;
+                
+                failedRecords.forEach(rec => {
+                    const v = rec.values;
+                    const f = rec.failures;
+                    const reasons = [];
+                    if (f.hres) reasons.push(`hres > ${rules.hres}`);
+                    if (f.vres) reasons.push(`vres > ${rules.vres}`);
+                    if (f.hacc) reasons.push(`hacc > ${rules.hacc}`);
+                    if (f.vacc) reasons.push(`vacc > ${rules.vacc}`);
+                    if (f.integrity) reasons.push(`Integrity ไม่ใช่ '${rules.integrity}'`);
+                    // UPDATED: Changed failure reason text for more clarity
+                    if (f.Href) reasons.push(`Href ไม่ตรงตามข้อกำหนด (WGS84)`);
+                    if (f.Vref) reasons.push(`Vref ไม่ตรงตามข้อกำหนด (EGM96)`);
+                    const reasonString = reasons.join('<br>');
+
+                    summaryHtml += `<tr>
+                            <td>${v.IDNumber}</td>
+                            <td ${f.hres ? 'class="fail-cell"' : ''}>${isNaN(v.hres) ? 'N/A' : v.hres}</td>
+                            <td ${f.vres ? 'class="fail-cell"' : ''}>${isNaN(v.vres) ? 'N/A' : v.vres}</td>
+                            <td ${f.hacc ? 'class="fail-cell"' : ''}>${isNaN(v.hacc) ? 'N/A' : v.hacc}</td>
+                            <td ${f.vacc ? 'class="fail-cell"' : ''}>${isNaN(v.vacc) ? 'N/A' : v.vacc}</td>
+                            <td ${f.integrity ? 'class="fail-cell"' : ''}>${v.Integrity || 'N/A'}</td>
+                            <td ${f.Href ? 'class="fail-cell"' : ''}>${v.Href || 'N/A'}</td>
+                            <td ${f.Vref ? 'class="fail-cell"' : ''}>${v.Vref || 'N/A'}</td>
+                            <td class="reason-cell">${reasonString}</td>
+                        </tr>`;
+                });
+                summaryHtml += `</tbody></table>`;
+            }
+            resultsDiv.innerHTML = summaryHtml;
+        }
+    </script>
+</body>
+</html>
